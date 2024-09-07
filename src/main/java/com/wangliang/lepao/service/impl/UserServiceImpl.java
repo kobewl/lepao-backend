@@ -2,19 +2,27 @@ package com.wangliang.lepao.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.wangliang.lepao.common.ErrorCode;
+import com.wangliang.lepao.exception.BusinessException;
 import com.wangliang.lepao.mapper.UserMapper;
 import com.wangliang.lepao.model.domain.User;
 import com.wangliang.lepao.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import static com.wangliang.lepao.constant.UserConstant.USER_LOGIN_STATE;
 
 
 /**
@@ -65,29 +73,88 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public User getSafetyUser(User originUser) {
-        return null;
+        if (originUser == null) {
+            return null;
+        }
+        User safetyUser = new User();
+        safetyUser.setId(originUser.getId());
+        safetyUser.setUsername(originUser.getUsername());
+        safetyUser.setUserAccount(originUser.getUserAccount());
+        safetyUser.setAvatarUrl(originUser.getAvatarUrl());
+        safetyUser.setGender(originUser.getGender());
+        safetyUser.setPhone(originUser.getPhone());
+        safetyUser.setEmail(originUser.getEmail());
+        safetyUser.setPlanetCode(originUser.getPlanetCode());
+        safetyUser.setUserRole(originUser.getUserRole());
+        safetyUser.setUserStatus(originUser.getUserStatus());
+        safetyUser.setCreateTime(originUser.getCreateTime());
+        safetyUser.setTags(originUser.getTags());
+        return safetyUser;
     }
 
     /**
      * 用户注销
      *
      * @param request
-     * @return
+     * @return int
      */
     @Override
     public int userLogout(HttpServletRequest request) {
-        return 0;
+        // 移除用户登录态
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        return 1;
     }
 
     /**
      * 根据标签搜索用户
      *
-     * @param tagNameList
-     * @return
+     * @param tagNameList 用户要拥有的标签
+     * @return List<User>
      */
     @Override
     public List<User> searchUsersByTags(List<String> tagNameList) {
-        return null;
+        if (CollectionUtils.isEmpty(tagNameList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // 计算耗时,开始时间
+        //long startTime = System.currentTimeMillis();
+        // ----------------第一种方式：通过数据库查询   查询耗时：241ms----------------------------------
+        /*QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        // 查询条件：标签包含所有输入的标签
+        // like'' and lik''  and like''
+        for (String tagName : tagNameList){
+            queryWrapper = queryWrapper.like("tags", tagName);
+        }
+        List<User> userList = userMapper.selectList(queryWrapper);
+        // 脱敏
+        return userList.stream()
+                .map(this::getSafetyUser)
+                .collect(Collectors.toList());
+*/        // ----------------第二种方式：通过内存查询  查询耗时：241ms----------------------------------
+        // 1. 查询所有用户列表
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        List<User> userList = userMapper.selectList(queryWrapper);
+        Gson gson = new Gson();
+        // 2. 在内存中根据标签过滤用户列表
+         return userList.stream().filter(user -> {
+            String tags = user.getTags();
+            Set<String> tempTageNameList = gson.fromJson(tags, new TypeToken<Set<String>>() {}.getType());
+            if (StringUtils.isBlank(tags)) {
+                return false;
+            }
+            for (String tagName : tagNameList) {
+                if (!tempTageNameList.contains(tagName)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSafetyUser)
+                .collect(Collectors.toList());
+
+        // 计算耗时,结束时间
+/*        long endTime = System.currentTimeMillis();
+        log.info("查询耗时：" + (endTime - startTime) + "ms");
+        return userList;*/
     }
 
     /**
@@ -228,7 +295,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return BaseMapper
      */
     @Override
-    public BaseMapper<User> getBaseMapper() {
+    public UserMapper getBaseMapper() {
         return null;
     }
 
