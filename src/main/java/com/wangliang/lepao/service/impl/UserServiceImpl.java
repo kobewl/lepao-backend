@@ -14,14 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.DigestUtils;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static com.wangliang.lepao.constant.UserConstant.SALT;
 import static com.wangliang.lepao.constant.UserConstant.USER_LOGIN_STATE;
 
 
@@ -49,7 +52,54 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword, String planetCode) {
-        return 0;
+        // 1.校验
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (userAccount.length() < 4) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
+        }
+        if (userPassword.length() < 8 || checkPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
+        }
+        if (planetCode.length() > 5) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "星球编号过长");
+        }
+        // 账户不能包含特殊字符
+        String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
+        Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
+        if (matcher.find()) {
+            return -1;
+        }
+        if (checkPassword.equals(userPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+        }
+        // 账户不能重复
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        long count = userMapper.selectCount(queryWrapper);
+        if (count > 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
+        }
+        // 星球编号不能重复
+        queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("planetCode", planetCode);
+        count = userMapper.selectCount(queryWrapper);
+        if (count > 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "编号重复");
+        }
+        // 2. 加密
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+        // 3. 插入数据
+        User user = new User();
+        user.setUserAccount(userAccount);
+        user.setUserPassword(encryptPassword);
+        user.setPlanetCode(planetCode);
+        boolean saveResult = this.save(user);
+        if (!saveResult) {
+            return -1;
+        }
+        return user.getId();
     }
 
     /**
@@ -62,7 +112,39 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
-        return null;
+        // 1. 校验
+        if (StringUtils.isAnyBlank(userAccount, userPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+        if (userAccount.length() < 4) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号过短");
+        }
+        if (userPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
+        }
+        // 账户不能包含特殊字符
+        String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
+        Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
+        if (matcher.find()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户账号包含非法字符");
+        }
+        // 2. 加密
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+        // 查询用户是否存在
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("userPassword", encryptPassword);
+        User user = userMapper.selectOne(queryWrapper);
+        // 用户不存在
+        if (user == null) {
+            log.info("user login failed, userAccount cannot match userPassword");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在");
+        }
+        // 3. 用户脱敏
+        User safetyUser = getSafetyUser(user);
+        // 4. 记录用户的登录态
+        request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
+        return safetyUser;
     }
 
     /**
@@ -130,25 +212,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return userList.stream()
                 .map(this::getSafetyUser)
                 .collect(Collectors.toList());
-*/        // ----------------第二种方式：通过内存查询  查询耗时：241ms----------------------------------
+*/      // ----------------第二种方式：通过内存查询  查询耗时：241ms----------------------------------
         // 1. 查询所有用户列表
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         List<User> userList = userMapper.selectList(queryWrapper);
         Gson gson = new Gson();
         // 2. 在内存中根据标签过滤用户列表
-         return userList.stream().filter(user -> {
-            String tags = user.getTags();
-            Set<String> tempTageNameList = gson.fromJson(tags, new TypeToken<Set<String>>() {}.getType());
-            if (StringUtils.isBlank(tags)) {
-                return false;
-            }
-            for (String tagName : tagNameList) {
-                if (!tempTageNameList.contains(tagName)) {
-                    return false;
-                }
-            }
-            return true;
-        }).map(this::getSafetyUser)
+        return userList.stream().filter(user -> {
+                    String tags = user.getTags();
+                    Set<String> tempTageNameList = gson.fromJson(tags, new TypeToken<Set<String>>() {
+                    }.getType());
+                    // Optional java8新特性，如果为空，则返回一个空的集合，否则返回一个包含所有标签的集合
+                    tempTageNameList = Optional.ofNullable(tempTageNameList).orElse(new HashSet<>());
+                    for (String tagName : tagNameList) {
+                        if (!tempTageNameList.contains(tagName)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }).map(this::getSafetyUser)
                 .collect(Collectors.toList());
 
         // 计算耗时,结束时间

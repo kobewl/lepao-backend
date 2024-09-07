@@ -3,8 +3,7 @@ package com.wangliang.lepao.constant;
 /**
  * 用户常量
  *
- * @author <a href="https://github.com/liwangliang">程序员鱼皮</a>
- * @from <a href="https://wangliang.icu">编程导航知识星球</a>
+ * @author wangliang
  */
 public interface UserConstant {
 
@@ -12,6 +11,11 @@ public interface UserConstant {
      * 用户登录态键
      */
     String USER_LOGIN_STATE = "userLoginState";
+
+    /**
+     * 用户密码加盐
+     */
+    String SALT = "wangliang";
 
     //  ------- 权限 --------
 
