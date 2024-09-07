@@ -10,6 +10,10 @@ spring:
     url: jdbc:mysql://localhost:3306/lepao?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: 123456
+  mvc:
+    pathmatch:
+      matching-strategy: ANT_PATH_MATCHER
+
 server:
   port: 8080
   servlet:
