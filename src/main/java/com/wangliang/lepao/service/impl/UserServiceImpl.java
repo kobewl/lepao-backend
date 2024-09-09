@@ -15,13 +15,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import static com.wangliang.lepao.constant.UserConstant.SALT;
 import static com.wangliang.lepao.constant.UserConstant.USER_LOGIN_STATE;
 
@@ -38,7 +39,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Resource
     private UserMapper userMapper;
 
-
+    /**
+     * 用户注册
+     * @param userAccount   用户账户
+     * @param userPassword  用户密码
+     * @param checkPassword 校验密码
+     * @param planetCode    星球编号
+     * @return 用户编号
+     */
     @Override
     public long userRegister(String userAccount, String userPassword, String checkPassword, String planetCode) {
         // 1. 校验
@@ -92,6 +100,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return user.getId();
     }
 
+    /**
+     * 用户登录
+     * @param userAccount  用户账户
+     * @param userPassword 用户密码
+     * @param request      请求
+     * @return  用户
+     */
     @Override
     public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 1. 校验
@@ -132,8 +147,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     /**
      * 用户脱敏
      *
-     * @param originUser
-     * @return
+     * @param originUser 原始用户
+     * @return User
      */
     @Override
     public User getSafetyUser(User originUser) {
@@ -169,59 +184,106 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
-     * 根据标签搜索用户（内存过滤）
+     * 根据标签搜索用户
      *
      * @param tagNameList 用户要拥有的标签
-     * @return
+     * @return List<User>
      */
     @Override
     public List<User> searchUsersByTags(List<String> tagNameList) {
         if (CollectionUtils.isEmpty(tagNameList)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // 1. 先查询所有用户
+        // 计算耗时,开始时间
+        //long startTime = System.currentTimeMillis();
+        // ----------------第一种方式：通过数据库查询   查询耗时：241ms----------------------------------
+        /*QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        // 查询条件：标签包含所有输入的标签
+        // like'' and lik''  and like''
+        for (String tagName : tagNameList){
+            queryWrapper = queryWrapper.like("tags", tagName);
+        }
+        List<User> userList = userMapper.selectList(queryWrapper);
+        // 脱敏
+        return userList.stream()
+                .map(this::getSafetyUser)
+                .collect(Collectors.toList());
+*/      // ----------------第二种方式：通过内存查询  查询耗时：241ms----------------------------------
+        // 1. 查询所有用户列表
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         List<User> userList = userMapper.selectList(queryWrapper);
         Gson gson = new Gson();
-        // 2. 在内存中判断是否包含要求的标签
+        // 2. 在内存中根据标签过滤用户列表
         return userList.stream().filter(user -> {
-            String tagsStr = user.getTags();
-            Set<String> tempTagNameSet = gson.fromJson(tagsStr, new TypeToken<Set<String>>() {
-            }.getType());
-            tempTagNameSet = Optional.ofNullable(tempTagNameSet).orElse(new HashSet<>());
-            for (String tagName : tagNameList) {
-                if (!tempTagNameSet.contains(tagName)) {
-                    return false;
-                }
-            }
-            return true;
-        }).map(this::getSafetyUser).collect(Collectors.toList());
+                    String tags = user.getTags();
+                    Set<String> tempTageNameList = gson.fromJson(tags, new TypeToken<Set<String>>() {
+                    }.getType());
+                    // Optional java8新特性，如果为空，则返回一个空的集合，否则返回一个包含所有标签的集合
+                    tempTageNameList = Optional.ofNullable(tempTageNameList).orElse(new HashSet<>());
+                    for (String tagName : tagNameList) {
+                        if (!tempTageNameList.contains(tagName)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }).map(this::getSafetyUser)
+                .collect(Collectors.toList());
+
+        // 计算耗时,结束时间
+/*        long endTime = System.currentTimeMillis();
+        log.info("查询耗时：" + (endTime - startTime) + "ms");
+        return userList;*/
     }
 
+    /**
+     * 更新用户信息
+     * @param user 用户信息
+     * @param loginUser 登录用户
+     * @return int
+     */
     @Override
-    public int updateUser(User user, User loginUser) {
+    public int updateUser(@RequestBody User user, User loginUser) {
+        // 判断权限, 管理员可以更新任意用户，普通用户只能更新自己的信息
         long userId = user.getId();
-        if (userId <= 0) {
+        if (loginUser == null || userId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        // todo 补充校验，如果用户没有传任何要更新的值，就直接报错，不用执行 update 语句
-        // 如果是管理员，允许更新任意用户
-        // 如果不是管理员，只允许更新当前（自己的）信息
-        if (!isAdmin(loginUser) && userId != loginUser.getId()) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
-        }
+        // 检查用户是否存在
         User oldUser = userMapper.selectById(userId);
         if (oldUser == null) {
             throw new BusinessException(ErrorCode.NULL_ERROR);
         }
-        return userMapper.updateById(user);
+        // 如果不是管理员，只允许更新当前（自己的）信息
+        if (!isAdmin(loginUser) && userId != loginUser.getId()) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        // 如果用户没有传任何要更新的值，就直接报错，不用执行 update 语句
+        if (user.equals(oldUser)) {
+            throw new BusinessException(ErrorCode.NO_UPDATE_FIELD);
+        }
+        // 更新用户信息
+        int updatedRows = userMapper.updateById(user);
+        if (updatedRows == 0) {
+            throw new BusinessException(ErrorCode.UPDATE_FAILED);
+        }
+        return updatedRows;
     }
 
+    /**
+     * 获取登录用户
+     * @param request HttpServletRequest
+     * @return User
+     */
     @Override
     public User getLoginUser(HttpServletRequest request) {
-
-        return null;
-
+        if (request == null){
+            return null;
+        }
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (userObj == null) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        return (User) userObj;
     }
 
     /**
@@ -233,9 +295,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public boolean isAdmin(HttpServletRequest request) {
         // 仅管理员可查询
-
-
-        return false;
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) userObj;
+        return user != null && user.getUserRole() == UserConstant.ADMIN_ROLE;
     }
 
     /**
@@ -249,9 +311,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return loginUser != null && loginUser.getUserRole() == UserConstant.ADMIN_ROLE;
     }
 
-
 }
-
-
 
 

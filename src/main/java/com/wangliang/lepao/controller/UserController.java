@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.wangliang.lepao.constant.UserConstant.ADMIN_ROLE;
 import static com.wangliang.lepao.constant.UserConstant.USER_LOGIN_STATE;
 
 
@@ -80,7 +81,7 @@ public class UserController {
         Object attribute = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) attribute;
         if (currentUser == null) {
-            throw  new BusinessException(ErrorCode.NOT_LOGIN);
+            throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
         long userId = currentUser.getId();
         // 校验用户是否合法
@@ -115,4 +116,39 @@ public class UserController {
         return ResultUtils.success(userList);
     }
 
+    @PostMapping("/update")
+    public BaseResponse<Integer> updateUser(@RequestBody User user, HttpServletRequest request) {
+        // 校验参数是否为空
+        if (user == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        int result = userService.updateUser(user, loginUser);
+        return ResultUtils.success(result);
+    }
+
+    @PostMapping("/delete")
+    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
+        // 校验权限，判断是否为管理员
+        if (!userService.isAdmin(request)) {
+            throw new BusinessException(ErrorCode.NO_AUTH);
+        }
+        if (id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        boolean result = userService.removeById(id);
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 判断是否为管理员
+     *
+     * @param request http请求
+     * @return boolean
+     */
+    private boolean isAdmin(HttpServletRequest request) {
+        Object usrObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) usrObj;
+        return user != null && user.getUserRole() == ADMIN_ROLE;
+    }
 }
