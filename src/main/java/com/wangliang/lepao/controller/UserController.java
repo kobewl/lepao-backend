@@ -77,13 +77,16 @@ public class UserController {
 
     @GetMapping("/current")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
+        Object attribute = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) attribute;
         if (currentUser == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN);
+            throw  new BusinessException(ErrorCode.NOT_LOGIN);
         }
         long userId = currentUser.getId();
-        // TODO 校验用户是否合法
+        // 校验用户是否合法
+        if (userId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
         User user = userService.getById(userId);
         User safetyUser = userService.getSafetyUser(user);
         return ResultUtils.success(safetyUser);
@@ -110,45 +113,6 @@ public class UserController {
         }
         List<User> userList = userService.searchUsersByTags(tagNameList);
         return ResultUtils.success(userList);
-    }
-
-    @PostMapping("/update")
-    public BaseResponse<Integer> updateUser(@RequestBody User user, HttpServletRequest request) {
-        // 校验参数是否为空
-        if (user == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        User loginUser = userService.getLoginUser(request);
-        int result = userService.updateUser(user, loginUser);
-        return ResultUtils.success(result);
-    }
-
-    @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteUser(@RequestBody long id, HttpServletRequest request) {
-        if (!userService.isAdmin(request)) {
-            throw new BusinessException(ErrorCode.NO_AUTH);
-        }
-        if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        boolean b = userService.removeById(id);
-        return ResultUtils.success(b);
-    }
-
-    /**
-     * 获取最匹配的用户
-     *
-     * @param num
-     * @param request
-     * @return
-     */
-    @GetMapping("/match")
-    public BaseResponse<List<User>> matchUsers(long num, HttpServletRequest request) {
-        if (num <= 0 || num > 20) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
-        }
-        User user = userService.getLoginUser(request);
-        return ResultUtils.success(userService.matchUsers(num, user));
     }
 
 }

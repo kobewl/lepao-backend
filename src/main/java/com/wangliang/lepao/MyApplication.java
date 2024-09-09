@@ -4,6 +4,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 
 /**
@@ -11,7 +12,8 @@ import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
  *
  */
 @MapperScan("com.wangliang.lepao.mapper")
-@SpringBootApplication(exclude = {RedisAutoConfiguration.class})
+@SpringBootApplication
+@EnableScheduling
 public class MyApplication {
 
     public static void main(String[] args) {

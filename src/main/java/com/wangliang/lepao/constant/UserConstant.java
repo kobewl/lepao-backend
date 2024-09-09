@@ -10,10 +10,11 @@ public interface UserConstant {
     /**
      * 用户登录态键
      */
+
     String USER_LOGIN_STATE = "userLoginState";
 
     /**
-     * 用户密码加盐
+     * 盐值，混淆密码
      */
     String SALT = "wangliang";
 

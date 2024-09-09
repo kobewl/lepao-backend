@@ -12,7 +12,6 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2WebMvc;
 
-
 /**
  * 自定义 Swagger 接口文档的配置
  *
@@ -20,7 +19,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2WebMvc;
  */
 @Configuration
 @EnableSwagger2WebMvc
-@Profile({"dev", "test"})
+@Profile({"dev", "test"}) // 让某些bean只在特定环境下生效
 public class SwaggerConfig {
 
     @Bean(value = "defaultApi2")
@@ -28,7 +27,6 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                // 这里一定要标注你控制器的位置
                 .apis(RequestHandlerSelectors.basePackage("com.wangliang.lepao.controller"))
                 .paths(PathSelectors.any())
                 .build();
@@ -36,7 +34,8 @@ public class SwaggerConfig {
 
     /**
      * 配置接口文档信息
-     * @return
+     *
+     * @return ApiInfo
      */
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
