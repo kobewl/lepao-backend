@@ -311,6 +311,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return loginUser != null && loginUser.getUserRole() == UserConstant.ADMIN_ROLE;
     }
 
+    /**
+     * todo 获取重点用户id
+     * @return List<Long>
+     */
+    @Override
+    public List<Long> getMainUserIds() {
+        List<Long> mainUserIds = new ArrayList<>();
+        mainUserIds.add(1L);
+        return mainUserIds;
+    }
+
 }
 
 

@@ -89,5 +89,9 @@ public interface UserService extends IService<User> {
      */
     boolean isAdmin(User loginUser);
 
-
+    /**
+     * 获取重点用户id
+     * @return List<Long>
+     */
+    List<Long> getMainUserIds();
 }
