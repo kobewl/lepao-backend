@@ -46,21 +46,27 @@ public class PreCacheJob {
         RLock lock = redissonClient.getLock(SYSTEM_NAME + ":precachejob:docache:lock");
         try {
             // 保证只有一个线程可以获取锁，其他线程直接跳过
-            if (lock.tryLock(0, 3, TimeUnit.MILLISECONDS)) {
+            // 看门狗机制，解决redis分布式锁无法自动续期的问题
+            if (lock.tryLock(0, -1, TimeUnit.MILLISECONDS)) {
                 for (Long userId : getMainUserLists()) {
                     String redisKey = String.format("lepao:user:recommend:%s", userId);
                     QueryWrapper<User> queryWrapper = new QueryWrapper<>();
                     Page<User> userPage = userService.page(new Page<>(1, 20), queryWrapper);
                     // 将用户信息缓存到redis中
                     try {
-                        redisTemplate.opsForValue().set(redisKey, userPage, 60, TimeUnit.MINUTES);
+                        redisTemplate.opsForValue().set(redisKey, userPage, 30000, TimeUnit.MILLISECONDS);
                     } catch (Exception e) {
                         log.error("redis set key error for user {}", userId, e);
                     }
                 }
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.error("preCache error", e);
+        } finally {
+            // 只能释放自己的锁
+            if (lock.isHeldByCurrentThread()){
+                lock.unlock();
+            }
         }
     }
 }
