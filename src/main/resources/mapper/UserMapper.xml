@@ -28,5 +28,14 @@
         createTime,updateTime,isDelete,
         userRole,planetCode
     </sql>
+
+    <!-- 查询重点用户 -->
+    <select id="selectImportantUsers" resultType="com.wangliang.lepao.model.domain.User">
+        SELECT * FROM user
+        WHERE
+            (userRole = 1 AND isDelete = 0) OR
+            (userRole = 0 AND (phone IS NOT NULL OR email IS NOT NULL) AND isDelete = 0)
+    </select>
+
 </mapper>
 

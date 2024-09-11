@@ -312,13 +312,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
-     * todo 获取重点用户id
+     * 获取重点用户id：活跃度高，评论多，影响力大，关注人数多的用户
      * @return List<Long>
      */
     @Override
     public List<Long> getMainUserIds() {
         List<Long> mainUserIds = new ArrayList<>();
-        mainUserIds.add(1L);
+        userMapper.selectImportantUsers().forEach(user -> mainUserIds.add(user.getId()));
         return mainUserIds;
     }
 

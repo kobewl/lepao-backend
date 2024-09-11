@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.wangliang.lepao.model.domain.User;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.List;
+
 /**
  * 用户 Mapper
  *
@@ -11,6 +13,11 @@ import org.apache.ibatis.annotations.Mapper;
  */
 public interface UserMapper extends BaseMapper<User> {
 
+    /**
+     * 查询重点用户
+     * @return 重点用户列表
+     */
+    List<User> selectImportantUsers();
 }
 
 

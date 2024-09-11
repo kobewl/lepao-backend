@@ -20,4 +20,46 @@ public class UserServiceTest {
         List<User> userList = userService.searchUsersByTags(tagNameList);
         Assert.assertNotNull(userList);
     }
+
+    @Test
+    void userRegister() {
+    }
+
+    @Test
+    void userLogin() {
+    }
+
+    @Test
+    void getSafetyUser() {
+    }
+
+    @Test
+    void userLogout() {
+    }
+
+    @Test
+    void searchUsersByTags() {
+    }
+
+    @Test
+    void updateUser() {
+    }
+
+    @Test
+    void getLoginUser() {
+    }
+
+    @Test
+    void isAdmin() {
+    }
+
+    @Test
+    void testIsAdmin() {
+    }
+
+    @Test
+    void getMainUserIds() {
+        List<Long> mainUserIds = userService.getMainUserIds();
+        System.out.println(mainUserIds);
+    }
 }
