@@ -1,7 +1,7 @@
 package com.wangliang.lepao.exception;
 
 import com.wangliang.lepao.common.BaseResponse;
-import com.wangliang.lepao.common.ErrorCode;
+import com.wangliang.lepao.model.enums.ErrorCode;
 import com.wangliang.lepao.common.ResultUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;

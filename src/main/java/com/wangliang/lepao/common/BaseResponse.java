@@ -1,5 +1,6 @@
 package com.wangliang.lepao.common;
 
+import com.wangliang.lepao.model.enums.ErrorCode;
 import lombok.Data;
 
 import java.io.Serializable;

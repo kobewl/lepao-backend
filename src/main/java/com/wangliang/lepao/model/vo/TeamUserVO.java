@@ -25,7 +25,6 @@ public class TeamUserVO implements Serializable {
      */
     private String name;
 
-
     /**
      * 描述
      */

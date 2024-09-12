@@ -11,8 +11,14 @@ public enum TeamStatusEnum {
     PRIVATE(1, "私有"),
     SECRET(2, "加密");
 
+    /**
+     * 状态值
+     */
     private int value;
 
+    /**
+     * 状态描述
+     */
     private String text;
 
     public static TeamStatusEnum getEnumByValue(Integer value) {

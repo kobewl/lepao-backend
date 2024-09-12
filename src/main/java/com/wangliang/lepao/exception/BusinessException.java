@@ -1,6 +1,6 @@
 package com.wangliang.lepao.exception;
 
-import com.wangliang.lepao.common.ErrorCode;
+import com.wangliang.lepao.model.enums.ErrorCode;
 import lombok.Getter;
 
 /**

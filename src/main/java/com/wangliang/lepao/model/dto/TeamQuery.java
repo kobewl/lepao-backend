@@ -8,7 +8,7 @@ import java.util.List;
 
 
 /**
- * 队伍查询封装类
+ * 队伍查询请求参数封装类
  *
  * @author wangliang
  */

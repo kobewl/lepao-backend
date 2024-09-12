@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.wangliang.lepao.common.ErrorCode;
+import com.wangliang.lepao.model.enums.ErrorCode;
 import com.wangliang.lepao.constant.UserConstant;
 import com.wangliang.lepao.exception.BusinessException;
 import com.wangliang.lepao.mapper.UserMapper;

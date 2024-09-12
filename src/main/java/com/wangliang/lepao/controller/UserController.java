@@ -1,10 +1,9 @@
 package com.wangliang.lepao.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wangliang.lepao.common.BaseResponse;
-import com.wangliang.lepao.common.ErrorCode;
+import com.wangliang.lepao.model.enums.ErrorCode;
 import com.wangliang.lepao.common.ResultUtils;
 import com.wangliang.lepao.exception.BusinessException;
 import com.wangliang.lepao.model.domain.User;

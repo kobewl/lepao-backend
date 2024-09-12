@@ -1,4 +1,4 @@
-package com.wangliang.lepao.common;
+package com.wangliang.lepao.model.enums;
 
 /**
  * 错误码
@@ -15,6 +15,7 @@ public enum ErrorCode {
     FORBIDDEN(40301, "禁止操作", ""),
     NO_UPDATE_FIELD(40302, "无更新字段", ""),
     UPDATE_FAILED(40303, "更新失败", ""),
+    ADD_FAILED(40304, "新增失败", ""),
     SYSTEM_ERROR(50000, "系统内部异常", "");
 
     private final int code;

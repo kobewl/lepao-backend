@@ -9,8 +9,7 @@ import java.util.Date;
 /**
  * 队伍实体
  *
- * @author <a href="https://github.com/liwangliang">程序员鱼皮</a>
- * @from <a href="https://wangliang.icu">编程导航知识星球</a>
+ * @author wangliang
  */
 @TableName(value = "team")
 @Data
