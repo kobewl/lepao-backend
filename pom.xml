@@ -78,6 +78,12 @@
             <artifactId>easyexcel</artifactId>
             <version>3.1.0</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/cn.hutool/hutool-core -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+            <version>5.8.27</version>
+        </dependency>
         <!--添加swagger的依赖-->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>

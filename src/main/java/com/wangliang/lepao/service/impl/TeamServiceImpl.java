@@ -1,6 +1,7 @@
 package com.wangliang.lepao.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wangliang.lepao.model.enums.ErrorCode;
 import com.wangliang.lepao.exception.BusinessException;
@@ -25,12 +26,16 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.DigestUtils;
+
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static com.wangliang.lepao.constant.UserConstant.SALT;
 
 /**
  * 队伍服务实现类
@@ -53,7 +58,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, User loginUser) {
-        // 1. 请求参数是否为空？
+        UserTeam userTeam = new UserTeam();
+        // 1. 请求参数是否为空
         if (team == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -97,7 +103,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "超时时间 > 当前时间");
         }
         // 7. 校验用户最多创建 5 个队伍
-        // todo 有 bug，可能同时创建 100 个队伍
+        // todo 有 bug，可能同时创建 100 个队伍，需要加锁
         QueryWrapper<Team> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userId", userId);
         long hasTeamNum = this.count(queryWrapper);
@@ -105,6 +111,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户最多创建 5 个队伍");
         }
         // 8. 插入队伍信息到队伍表
+        if (TeamStatusEnum.SECRET.equals(statusEnum)) {
+            String addPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
+            team.setPassword(addPassword);
+        } else {
+            team.setPassword(null);
+        }
         team.setId(null);
         team.setUserId(userId);
         boolean result = this.save(team);
@@ -113,7 +125,6 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "创建队伍失败");
         }
         // 9. 插入用户  => 队伍关系到关系表
-        UserTeam userTeam = new UserTeam();
         userTeam.setUserId(userId);
         userTeam.setTeamId(teamId);
         userTeam.setJoinTime(new Date());
@@ -200,6 +211,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
     @Override
     public boolean updateTeam(TeamUpdateRequest teamUpdateRequest, User loginUser) {
+        Team updateTeam = new Team();
         if (teamUpdateRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -220,8 +232,15 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             if (StringUtils.isBlank(teamUpdateRequest.getPassword())) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "加密房间必须要设置密码");
             }
+            String password = teamUpdateRequest.getPassword();
+            String encryptPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
+            updateTeam.setPassword(encryptPassword);
         }
-        Team updateTeam = new Team();
+        if (statusEnum.equals(TeamStatusEnum.PUBLIC)) {
+            if (!StringUtils.isBlank(teamUpdateRequest.getPassword())) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "公开房间不能设置密码");
+            }
+        }
         BeanUtils.copyProperties(teamUpdateRequest, updateTeam);
         return this.updateById(updateTeam);
     }
@@ -243,15 +262,17 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "禁止加入私有队伍");
         }
         String password = teamJoinRequest.getPassword();
+        String teamPassword = team.getPassword();
+        String newPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
         if (TeamStatusEnum.SECRET.equals(teamStatusEnum)) {
-            if (StringUtils.isBlank(password) || !password.equals(team.getPassword())) {
+            if (StringUtils.isBlank(newPassword) || !newPassword.equals(teamPassword)) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
             }
         }
         // 该用户已加入的队伍数量
         long userId = loginUser.getId();
         // 只有一个线程能获取到锁
-        RLock lock = redissonClient.getLock("yupao:join_team");
+        RLock lock = redissonClient.getLock("lepao:join_team");
         try {
             // 抢到锁并执行
             while (true) {
@@ -368,11 +389,28 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return this.removeById(teamId);
     }
 
+    @Override
+    public Page listPage(TeamQuery teamQuery) {
+        if (teamQuery == null) {
+            // 使用默认值创建分页对象
+            teamQuery = new TeamQuery();
+        }
+        // 创建分页对象
+        Page page = new Page<>(teamQuery.getPageNum(), teamQuery.getPageSize());
+        // 创建查询包装器
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        // 添加查询条件：当前时间小于过期时间
+        queryWrapper.gt("expireTime", new Date());
+        // 执行查询并返回分页结果
+        return this.page(page, queryWrapper);
+    }
+
+
     /**
      * 根据 id 获取队伍信息
      *
-     * @param teamId
-     * @return
+     * @param teamId (队伍 id)
+     * @return Team
      */
     private Team getTeamById(Long teamId) {
         if (teamId == null || teamId <= 0) {
@@ -388,8 +426,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     /**
      * 获取某队伍当前人数
      *
-     * @param teamId
-     * @return
+     * @param teamId (队伍 id)
+     * @return long类型的队伍人数
      */
     private long countTeamUserByTeamId(long teamId) {
         QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();

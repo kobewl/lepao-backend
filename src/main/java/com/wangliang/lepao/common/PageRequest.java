@@ -23,4 +23,5 @@ public class PageRequest implements Serializable {
      * 当前是第几页
      */
     protected int pageNum = 1;
+
 }

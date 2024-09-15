@@ -1,5 +1,7 @@
 package com.wangliang.lepao.constant;
 
+import cn.hutool.core.util.RandomUtil;
+
 /**
  * 用户常量
  *
@@ -17,6 +19,7 @@ public interface UserConstant {
      * 盐值，混淆密码
      */
     String SALT = "wangliang";
+
 
     //  ------- 权限 --------
 
