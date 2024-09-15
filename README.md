@@ -8,13 +8,16 @@
 
 - 用户注册与登录
 - 用户信息管理
-- 标签管理
-- 智能匹配
+- 队伍创建、加入、退出和删除
+- 用户标签智能管理
+- 用户和队伍的智能匹配
 
 ## 技术栈
 
 - SpringBoot
 - Mybatis
+- Mybatis-Plus
+- Redis
 - MySQL
 - Maven
 
@@ -26,7 +29,7 @@
 - MySQL 5.7 或更高版本
 - Maven 3.6 或更高版本
 - Redis 6.2 或更高版本
-- SpringBoot 2.6.4 或更高版本
+- SpringBoot 2.6 或更高版本
 
 ### 安装步骤
 
@@ -42,7 +45,9 @@ git clone https://github.com/kobewl/lepao-backend.git
 cd lepao-backend
 ```
 
-3. 修改 `application.properties` 文件，配置数据库连接信息
+3. 找到 `sql/create.sql` sql文件，并运行sql代码，完成数据库和表的创建
+
+4. 修改 `application.properties` 文件，配置数据库连接信息
 
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/lepao?useSSL=false&serverTimezone=UTC
@@ -50,13 +55,13 @@ spring.datasource.username=your_mysql_username
 spring.datasource.password=your_mysql_password
 ```
 
-4. 使用 Maven 构建项目
+5. 使用 Maven 构建项目
 
 ```bash
 mvn clean install
 ```
 
-5. 运行项目
+6. 运行项目
 
 ```bash
 java -jar target/lepao-backend.jar
