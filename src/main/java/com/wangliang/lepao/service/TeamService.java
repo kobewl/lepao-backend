@@ -75,13 +75,9 @@ public interface TeamService extends IService<Team> {
     boolean deleteTeam(long id, User loginUser);
 
     /**
-     * 队伍分页查询
-     * @param page 分页分页对象
-     * @param queryWrapper 查询条件
+     * 获取分页列表分页查询队伍
+     * @param teamQuery 查询条件
      * @return Page<Team>
      */
-    //Page<Team> listPage(Page<Team> page, QueryWrapper<Team> queryWrapper);
-
-
     Page<Team> listPage(TeamQuery teamQuery);
 }

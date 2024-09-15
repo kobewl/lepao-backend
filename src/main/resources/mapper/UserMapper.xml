@@ -29,6 +29,26 @@
         userRole,planetCode
     </sql>
 
+<!--    更新用户信息-->
+    <update id="updateUser">
+        UPDATE user
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="userAccount != null">userAccount = #{userAccount},</if>
+            <if test="avatarUrl != null">avatarUrl = #{avatarUrl},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="userPassword != null">userPassword = #{userPassword},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="userStatus != null">userStatus = #{userStatus},</if>
+            <if test="userRole != null">userRole = #{userRole},</if>
+            <if test="planetCode != null">planetCode = #{planetCode},</if>
+            <if test="isDelete != null">isDelete = #{isDelete},</if>
+            <if test="tags != null">tags = #{tags},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
     <!-- 查询重点用户 -->
     <select id="selectImportantUsers" resultType="com.wangliang.lepao.model.domain.User">
         SELECT * FROM user

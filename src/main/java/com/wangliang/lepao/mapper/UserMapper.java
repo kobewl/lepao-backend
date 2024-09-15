@@ -18,6 +18,11 @@ public interface UserMapper extends BaseMapper<User> {
      * @return 重点用户列表
      */
     List<User> selectImportantUsers();
+
+    /**
+     * 更新用户信息
+     */
+    int updateUser(User user);
 }
 
 

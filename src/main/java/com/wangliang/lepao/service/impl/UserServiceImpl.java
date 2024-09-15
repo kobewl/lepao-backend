@@ -12,6 +12,7 @@ import com.wangliang.lepao.model.domain.User;
 import com.wangliang.lepao.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
@@ -261,8 +262,74 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (user.equals(oldUser)) {
             throw new BusinessException(ErrorCode.NO_UPDATE_FIELD);
         }
+        User updateUser = userMapper.selectById(userId);
+        updateUser.setId(userId); // 确保设置了ID
+        String username = user.getUsername();
+        if (username != null && !username.isEmpty()) {
+            updateUser.setUsername(username);
+        }
+        String userAccount = user.getUserAccount();
+        if (userAccount != null && !userAccount.isEmpty()) {
+            updateUser.setUserAccount(userAccount);
+        }
+        String avatarUrl = user.getAvatarUrl();
+        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+            updateUser.setAvatarUrl(avatarUrl);
+        }
+        Integer gender = user.getGender();
+        if (gender != null && gender >= 0 && gender <= 1) {
+            updateUser.setGender(gender);
+        }
+        Integer userRole = user.getUserRole();
+        // 如果是管理员，才允许更新用户角色
+        if (isAdmin(loginUser) && userRole != null && userRole >= 0 && userRole <= 1) {
+            updateUser.setUserRole(userRole);
+        }
+        Integer userStatus = user.getUserStatus();
+        // 如果是管理员，才允许更新用户状态
+        if (isAdmin(loginUser) && userStatus != null && userStatus >= 0 && userStatus <= 1) {
+            updateUser.setUserStatus(userStatus);
+        }
+        String planetCode = user.getPlanetCode();
+        // 如果是管理员，才允许更新用户星球编号
+        if (isAdmin(loginUser) && planetCode != null && !planetCode.isEmpty()) {
+            updateUser.setPlanetCode(planetCode);
+        }
+        Integer isDelete = user.getIsDelete();
+        // 如果是管理员，才允许更新用户是否删除
+        if (isAdmin(loginUser) && isDelete != null && isDelete >= 0 && isDelete <= 1) {
+            updateUser.setIsDelete(isDelete);
+        }
+        String phone = user.getPhone();
+        if (phone != null && !phone.isEmpty()) {
+            if (phone.length() == 11){
+            updateUser.setPhone(phone);
+            }else {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "手机号长度不正确");
+            }
+        }
+        String email = user.getEmail();
+        if (email != null && !email.isEmpty()) {
+            if (email.contains("@")){
+                updateUser.setEmail(email);
+            }else {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式不正确");
+            }
+        }
+        String tags = user.getTags();
+        if (tags != null && !tags.isEmpty()) {
+            updateUser.setTags(tags);
+        }
+        String password = user.getUserPassword();
+        if (password != null && !password.isEmpty()) {
+            if (password.length() < 8) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户密码过短");
+            }
+            String updatePassword = DigestUtils.md5DigestAsHex((password + SALT).getBytes());
+            updateUser.setUserPassword(updatePassword);
+        }
         // 更新用户信息
-        int updatedRows = userMapper.updateById(user);
+        int updatedRows = userMapper.updateUser(updateUser);
         if (updatedRows == 0) {
             throw new BusinessException(ErrorCode.UPDATE_FAILED);
         }

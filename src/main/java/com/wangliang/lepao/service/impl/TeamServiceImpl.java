@@ -173,13 +173,22 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             // 根据状态来查询
             Integer status = teamQuery.getStatus();
             TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByValue(status);
-            if (statusEnum == null) {
-                statusEnum = TeamStatusEnum.PUBLIC;
+            if (statusEnum == null && !isAdmin) {
+                // 如果不传查询条件，并且不是管理员，查询所有非私有、非删除的队伍
+                queryWrapper.and(qw -> qw.eq("status", TeamStatusEnum.PUBLIC.getValue())
+                        .or()
+                        .eq("status", TeamStatusEnum.SECRET.getValue())
+                        .or()
+                        .eq("isDelete", 0));
+            } else if (isAdmin && statusEnum == null) {
+                queryWrapper.and(qw -> qw.eq("status", TeamStatusEnum.PUBLIC.getValue())
+                        .or()
+                        .eq("status", TeamStatusEnum.SECRET.getValue())
+                        .or()
+                        .eq("status", TeamStatusEnum.PRIVATE.getValue()));
+            } else {
+                queryWrapper.eq("status", statusEnum.getValue());
             }
-            if (!isAdmin && statusEnum.equals(TeamStatusEnum.PRIVATE)) {
-                throw new BusinessException(ErrorCode.NO_AUTH);
-            }
-            queryWrapper.eq("status", statusEnum.getValue());
         }
         // 不展示已过期的队伍
         // expireTime is null or expireTime > now()
@@ -374,7 +383,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         // 校验队伍是否存在
         Team team = getTeamById(id);
         long teamId = team.getId();
-        // 校验你是不是队伍的队长
+        // 校验是不是队伍的队长
         if (team.getUserId() != loginUser.getId()) {
             throw new BusinessException(ErrorCode.NO_AUTH, "无访问权限");
         }

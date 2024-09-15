@@ -3,6 +3,7 @@ package com.wangliang.lepao.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wangliang.lepao.common.BaseResponse;
+import com.wangliang.lepao.model.dto.SafetyUser;
 import com.wangliang.lepao.model.enums.ErrorCode;
 import com.wangliang.lepao.common.ResultUtils;
 import com.wangliang.lepao.exception.BusinessException;
@@ -12,6 +13,7 @@ import com.wangliang.lepao.model.request.UserRegisterRequest;
 import com.wangliang.lepao.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +47,7 @@ public class UserController {
 
     /**
      * 用户注册
+     *
      * @param userRegisterRequest 用户注册请求
      * @return BaseResponse<Long>
      */
@@ -66,8 +69,9 @@ public class UserController {
 
     /**
      * 用户登录
+     *
      * @param userLoginRequest 用户登录请求
-     * @param request http请求
+     * @param request          http请求
      * @return BaseResponse<User>
      */
     @PostMapping("/login")
@@ -86,6 +90,7 @@ public class UserController {
 
     /**
      * 用户退出
+     *
      * @param request http请求
      * @return BaseResponse<Integer>
      */
@@ -100,13 +105,15 @@ public class UserController {
 
     /**
      * 获取当前用户
+     *
      * @param request http请求
      * @return BaseResponse<User>
      */
     @GetMapping("/current")
-    public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
+    public BaseResponse<SafetyUser> getCurrentUser(HttpServletRequest request) {
         Object attribute = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) attribute;
+        SafetyUser safetyUser = new SafetyUser();
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN);
         }
@@ -116,15 +123,16 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User user = userService.getById(userId);
-        User safetyUser = userService.getSafetyUser(user);
+        BeanUtils.copyProperties(user, safetyUser);
         return ResultUtils.success(safetyUser);
     }
 
     /**
      * 根据用户名搜索用户
+     *
      * @param username 用户名
-     * @param request http请求
-     * @return BaseResponse<List<User>>
+     * @param request  http请求
+     * @return BaseResponse<List < User>>
      */
     @GetMapping("/search")
     public BaseResponse<List<User>> searchUsers(String username, HttpServletRequest request) {
@@ -142,8 +150,9 @@ public class UserController {
 
     /**
      * 根据标签搜索用户
+     *
      * @param tagNameList 标签列表
-     * @return BaseResponse<List<User>>
+     * @return BaseResponse<List < User>>
      */
     @GetMapping("/search/tags")
     public BaseResponse<List<User>> searchUsersByTags(@RequestParam(required = false) List<String> tagNameList) {
@@ -156,10 +165,11 @@ public class UserController {
 
     /**
      * 推荐用户
+     *
      * @param pageSize 页大小
-     * @param pageNum 页码
-     * @param request http请求
-     * @return BaseResponse<Page<User>>
+     * @param pageNum  页码
+     * @param request  http请求
+     * @return BaseResponse<Page < User>>
      */
     @GetMapping("/recommend")
     public BaseResponse<Page<User>> recommendUsers(long pageSize, long pageNum, HttpServletRequest request) {
@@ -184,7 +194,8 @@ public class UserController {
 
     /**
      * 更新用户
-     * @param user 用户
+     *
+     * @param user    用户
      * @param request http请求
      * @return BaseResponse<Integer>
      */
@@ -201,7 +212,8 @@ public class UserController {
 
     /**
      * 删除用户
-     * @param id 用户id
+     *
+     * @param id      用户id
      * @param request http请求
      * @return BaseResponse<Boolean>
      */
